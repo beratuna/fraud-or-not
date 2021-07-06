@@ -1,0 +1,438 @@
+---
+title: "Project"
+author: "berat"
+date: "6/14/2020"
+output: html_document
+---
+
+Install/Import necessary libraries
+```{r}
+#if(!require(tidyverse)) {install.packages("tidyverse", repos = "http://cran.us.r-project.org")}
+if(!require(dplyr)) {install.packages("dplyr")}
+
+if(!require(data.table)) {install.packages("data.table")}
+#if(!require(caret)) {install.packages("caret")}
+#if(!require(recommenderlab)) {install.packages("recommenderlab")}
+#if(!require(arules)) {install.packages("arules")}
+if(!require(SnowballC)) {install.packages("SnowballC")}
+if(!require(wordcloud)) {install.packages("wordcloud")}
+if(!require(infotheo)) {install.packages("infotheo")}
+if(!require(LiblineaR)) {install.packages("LiblineaR")}
+if(!require(glm)) {install.packages("glm")}
+```
+
+
+Read csv files
+
+We have train and test data.
+```{r}
+
+train_csv <- read.csv("train.csv", 
+                 header = TRUE, sep = ",")
+
+test_csv <- read.csv("test.csv", 
+                 header = TRUE, sep = ",")
+
+# get real and fraud jobs seperately
+real = train_csv[train_csv$fraudulent == 0,]
+fraud = train_csv[train_csv$fraudulent == 1,]
+head(fraud)
+#summary(train_csv)
+#summary(train_csv)
+kaggle_csv <- read.csv("sample_submission.csv", 
+                 header = TRUE, sep = ",")
+
+```
+
+WORD CLOUDS
+
+```{r}
+library(tm)
+library(SnowballC)
+fraud_concat <- paste(fraud$title, fraud$location, fraud$description)
+corpus = VCorpus(VectorSource(fraud_concat))
+#as.character(corpus[[1]])
+
+corpus = tm_map(corpus, content_transformer(tolower))
+corpus = tm_map(corpus, removeNumbers)
+corpus = tm_map(corpus, removePunctuation)
+corpus = tm_map(corpus, removeWords, stopwords("english"))
+corpus = tm_map(corpus, stemDocument)
+corpus = tm_map(corpus, stripWhitespace)
+#as.character(corpus[[1]])
+
+dtm_fraud = DocumentTermMatrix(corpus)
+convert_count <- function(x) {
+  y <- ifelse(x > 0, 1,0)
+  y <- factor(y, levels=c(0,1), labels=c("No", "Yes"))
+  y
+}
+
+# Apply the convert_count function to get final training and testing DTMs
+datasetNB <- apply(dtm_fraud, 2, convert_count)
+freq<- sort(colSums(as.matrix(dtm_fraud)), decreasing=TRUE)
+head(freq, 10)
+
+dataset_fraud = as.data.frame(as.matrix(datasetNB))
+wf<- data.frame(word=names(freq), freq=freq)
+head(wf, 10)
+library("RColorBrewer")
+set.seed(1234)
+wordcloud(words = wf$word, freq = wf$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+
+
+real_concat <- paste(real$title, real$location, real$description)
+corpus_real = VCorpus(VectorSource(paste(real_concat, collapse = '')))
+#as.character(corpus[[1]])
+
+corpus_real = tm_map(corpus_real, content_transformer(tolower))
+corpus_real = tm_map(corpus_real, removeNumbers)
+corpus_real = tm_map(corpus_real, removePunctuation)
+corpus_real = tm_map(corpus_real, removeWords, stopwords("english"))
+corpus_real = tm_map(corpus_real, stemDocument)
+corpus_real = tm_map(corpus_real, stripWhitespace)
+#as.character(corpus[[1]])
+
+dtm_real = DocumentTermMatrix(corpus_real)
+
+convert_count <- function(x) {
+  y <- ifelse(x > 0, 1,0)
+  y <- factor(y, levels=c(0,1), labels=c("No", "Yes"))
+  y
+}
+
+# Apply the convert_count function to get final training and testing DTMs
+datasetNB_real <- apply(dtm_real, 2, convert_count)
+dataset_real = as.data.frame(as.matrix(datasetNB_real))
+freq<- sort(colSums(as.matrix(dtm_real)), decreasing=TRUE)
+head(freq, 10)
+
+wf<- data.frame(word=names(freq), freq=freq)
+head(wf, 10)
+library("RColorBrewer")
+set.seed(1234)
+wordcloud(words = wf$word, freq = wf$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+
+
+
+#######Different depertment words 
+depertment_Production = train_csv[train_csv$department == "Production",]
+concat_pro <- paste(depertment_Production$title, depertment_Production$location, depertment_Production$description)
+corpus = VCorpus(VectorSource(concat_pro))
+#as.character(corpus[[1]])
+
+corpus = tm_map(corpus, content_transformer(tolower))
+corpus = tm_map(corpus, removeNumbers)
+corpus = tm_map(corpus, removePunctuation)
+corpus = tm_map(corpus, removeWords, stopwords("english"))
+corpus = tm_map(corpus, stemDocument)
+corpus = tm_map(corpus, stripWhitespace)
+#as.character(corpus[[1]])
+
+dtm_pro = DocumentTermMatrix(corpus)
+freq_pro<- sort(colSums(as.matrix(dtm_pro)), decreasing=TRUE)
+head(freq_pro, 10)
+
+depertment_Engineering = train_csv[train_csv$department == "Engineering",]
+concat <- paste(depertment_Engineering$title, depertment_Engineering$location, depertment_Engineering$description)
+corpus = VCorpus(VectorSource(concat))
+#as.character(corpus[[1]])
+
+corpus = tm_map(corpus, content_transformer(tolower))
+corpus = tm_map(corpus, removeNumbers)
+corpus = tm_map(corpus, removePunctuation)
+corpus = tm_map(corpus, removeWords, stopwords("english"))
+corpus = tm_map(corpus, stemDocument)
+corpus = tm_map(corpus, stripWhitespace)
+#as.character(corpus[[1]])
+
+dtm_eng = DocumentTermMatrix(corpus)
+freq_eng<- sort(colSums(as.matrix(dtm_eng)), decreasing=TRUE)
+head(freq_eng, 10)
+
+
+### Sales
+depertment_Engineering = train_csv[train_csv$department == "Management",]
+concat <- paste(depertment_Engineering$title, depertment_Engineering$location, depertment_Engineering$description)
+corpus = VCorpus(VectorSource(concat))
+#as.character(corpus[[1]])
+
+corpus = tm_map(corpus, content_transformer(tolower))
+corpus = tm_map(corpus, removeNumbers)
+corpus = tm_map(corpus, removePunctuation)
+corpus = tm_map(corpus, removeWords, stopwords("english"))
+corpus = tm_map(corpus, stemDocument)
+corpus = tm_map(corpus, stripWhitespace)
+#as.character(corpus[[1]])
+
+dtm_eng = DocumentTermMatrix(corpus)
+freq_eng<- sort(colSums(as.matrix(dtm_eng)), decreasing=TRUE)
+head(freq_eng, 10)
+
+
+#######Different industry words 
+depertment_Production = train_csv[train_csv$industry == "Computer Software",]
+concat_pro <- paste(depertment_Production$title, depertment_Production$location, depertment_Production$description)
+corpus = VCorpus(VectorSource(concat_pro))
+#as.character(corpus[[1]])
+
+corpus = tm_map(corpus, content_transformer(tolower))
+corpus = tm_map(corpus, removeNumbers)
+corpus = tm_map(corpus, removePunctuation)
+corpus = tm_map(corpus, removeWords, stopwords("english"))
+corpus = tm_map(corpus, stemDocument)
+corpus = tm_map(corpus, stripWhitespace)
+#as.character(corpus[[1]])
+
+dtm_pro = DocumentTermMatrix(corpus)
+freq_pro<- sort(colSums(as.matrix(dtm_pro)), decreasing=TRUE)
+head(freq_pro, 10)
+
+### Education
+depertment_Engineering = train_csv[train_csv$industry == "Education Management",]
+concat <- paste(depertment_Engineering$title, depertment_Engineering$location, depertment_Engineering$description)
+corpus = VCorpus(VectorSource(concat))
+#as.character(corpus[[1]])
+
+corpus = tm_map(corpus, content_transformer(tolower))
+corpus = tm_map(corpus, removeNumbers)
+corpus = tm_map(corpus, removePunctuation)
+corpus = tm_map(corpus, removeWords, stopwords("english"))
+corpus = tm_map(corpus, stemDocument)
+corpus = tm_map(corpus, stripWhitespace)
+#as.character(corpus[[1]])
+
+dtm_eng = DocumentTermMatrix(corpus)
+freq_eng<- sort(colSums(as.matrix(dtm_eng)), decreasing=TRUE)
+head(freq_eng, 10)
+
+```
+
+Do fake job postings increase with respect to the proposed salary range?
+```{r}
+real_salaries = real %>% filter(!is.na(real$salary_range) | real$salary_range != "")
+
+head(real_salaries)
+head(dplyr::filter(real, !is.null(real$salary_range)))
+
+real_salaries = filter(real, !is.na(real$salary_range) | real$salary_range != "") 
+real %>% filter(!is.na("salary_range"))
+real_sal <- table(real_salaries$salary_range)
+
+barplot(real_sal, main="Real - Occurance",
+   xlab="Salary Range")
+
+
+fake_salaries = filter(fraud, !is.na(fraud$salary_range) | fraud$salary_range != "") 
+fake_sal <- table(fake_salaries$salary_range)
+
+barplot(fake_sal, main="Fraud - Occurance",
+   xlab="Salary Range")
+
+
+```
+
+
+```{r}
+# real_salaries = real %>% filter(!is.na(real$salary_range))
+# real_salary <- table(real_salaries$salary_range)
+# #real_salary
+# nrow(real_salary)
+# fraud_salaries = fraud %>% filter(!is.na(fraud$salary_range))
+# fraud_salary <- table(fraud_salaries$salary_range)
+# #fraud_salary
+
+
+
+```
+
+```{r}
+
+library(infotheo)
+mut_loc <- mutinformation( train_csv$location, train_csv$fraudulent)
+mut_dep <- mutinformation( train_csv$department, train_csv$fraudulent)
+mut_tit <- mutinformation( train_csv$title, train_csv$fraudulent)
+mut_tel <- mutinformation( train_csv$telecommuting, train_csv$fraudulent)
+mut_emp <- mutinformation( train_csv$employment_type, train_csv$fraudulent)
+mut_inds <- mutinformation( train_csv$industry, train_csv$fraudulent)
+mut_logo <- mutinformation( train_csv$has_company_logo, train_csv$fraudulent)
+mut_ques <- mutinformation( train_csv$has_questions, train_csv$fraudulent)
+
+
+mut <- c(mut_loc, mut_dep, mut_tit, mut_tel, mut_emp, mut_inds, mut_logo, mut_ques)
+barplot(mut, main = "Mutual Information - Features",
+xlab = "Features",
+names.arg = c("loc", "dept", "title", "tel-com", "emp", "industry", "logo", "Question"),
+col = "darkred",
+ylab = "Mutual Information",)
+
+```
+
+Take complete training data to train model
+```{r}
+
+library(tm)
+library(SnowballC)
+concat <- paste(train_csv$description, train_csv$company_profile, train_csv$requirements, train_csv$benefits)
+#head(corpus)
+corpus = VCorpus(VectorSource(concat))
+
+corpus = tm_map(corpus, content_transformer(tolower))
+corpus = tm_map(corpus, removeNumbers)
+corpus = tm_map(corpus, removePunctuation)
+corpus = tm_map(corpus, removeWords, stopwords("english"))
+corpus = tm_map(corpus, stemDocument)
+corpus = tm_map(corpus, stripWhitespace)
+
+dtm = DocumentTermMatrix(corpus)
+dtm = removeSparseTerms(dtm, 0.99)
+
+#str(dtm)
+# convert_count <- function(x) {
+#   y <- ifelse(x > 0, 1,0)
+#   y <- factor(y, levels=c(0,1), labels=c("No", "Yes"))
+#   y
+# }
+#memory.limit(size=56000) 
+# datasetNB <- apply(dtm, 2, convert_count)
+dataset = as.data.frame(as.matrix(dtm))
+colnames(dataset) = make.names(colnames(dataset))
+dataset$Class = train_csv$fraudulent
+
+# testset
+concat <- test_csv$benefits#paste(test_csv$description, test_csv$company_profile, test_csv$requirements, test_csv$benefits)
+corpus = VCorpus(VectorSource(concat))
+corpus = tm_map(corpus, content_transformer(tolower))
+corpus = tm_map(corpus, removeNumbers)
+corpus = tm_map(corpus, removePunctuation)
+corpus = tm_map(corpus, removeWords, stopwords("english"))
+corpus = tm_map(corpus, stemDocument)
+corpus = tm_map(corpus, stripWhitespace)
+
+dtm_test = DocumentTermMatrix(corpus)
+dtm_test = removeSparseTerms(dtm_test, 0.99)
+#datasetNB <- apply(dtm_test, 2, convert_count)
+kaggle_testset = as.data.frame(as.matrix(dtm_test))
+kaggle_testset$Class = test_csv$fraudulent
+
+# library(caret)
+# library(e1071)
+# control <- trainControl(method="repeatedcv", number=10, repeats=3)
+# system.time( classifier_nb <- naiveBayes(dataset, dataset$Class, laplace = 1,
+#                                          trControl = control,tuneLength = 7) )
+# nb_pred = predict(classifier_nb, type = 'class', newdata = testset)
+# confusionMatrix(nb_pred,testset$Class)
+# 
+# svm_classifier <- svm(Class~., data=dataset)
+# svm_classifier
+# svm_pred = predict(svm_classifier,dataset)
+# confusionMatrix(svm_pred,testset$Class)
+```
+
+
+```{r}
+set.seed(222)
+split = sample(2,nrow(dataset),prob = c(0.75,0.25),replace = TRUE)
+train_set = dataset[split == 1,]
+test_set = dataset[split == 2,] 
+
+prop.table(table(train_set$Class))
+prop.table(table(test_set$Class))
+
+library(caret)
+library(e1071)
+library(randomForest)
+rf_classifier = randomForest(x = train_set,
+                          y = train_set$Class,
+                          type = "classification",
+                          ntree = 5)
+rf_classifier
+predTrainRF = predict(rf_classifier, type="prob")[,2]
+table(train$fraudulent, predTrainRF > 0.5)
+
+train_set <- train_set[, !duplicated(colnames(train_set))]
+log_classifier = glm(Class~ ., family = "binomial", data =train_set, maxit = 25)
+log_pred <- predict(log_classifier, type = 'response', newdata = test_set)
+log_conf_matrix = table(test_set$Class, log_pred > 0.5)
+log_conf_matrix
+ 
+# svm_classifier <- svm(Class~., data=train_set)
+# svm_pred = predict(svm_classifier,test_set)
+# svm_conf_matrix = table(test_set$Class, svm_pred > 0.5)
+# svm_conf_matrix
+# 
+# svm_conf_matrix = confu(test_set$Class, svm_pred > 0.5)
+```
+
+
+```{r}
+
+test_csv$fraudulent <- c(0)
+head(test_csv)
+final_data <- rbind(train_csv, test_csv)
+
+library(tm)
+library(SnowballC)
+concat <- paste(final_data$description, final_data$company_profile, final_data$requirements, final_data$benefits)
+#head(corpus)
+corpus = VCorpus(VectorSource(concat))
+
+corpus = tm_map(corpus, content_transformer(tolower))
+corpus = tm_map(corpus, removeNumbers)
+corpus = tm_map(corpus, removePunctuation)
+corpus = tm_map(corpus, removeWords, stopwords("english"))
+corpus = tm_map(corpus, stemDocument)
+corpus = tm_map(corpus, stripWhitespace)
+
+dtm = DocumentTermMatrix(corpus)
+dtm = removeSparseTerms(dtm, 0.99)
+dataset = as.data.frame(as.matrix(dtm))
+colnames(dataset) = make.names(colnames(dataset))
+dataset$Class = final_data$fraudulent
+
+testk_dataset <- dataset[(nrow(train_csv)+1):nrow(dataset),]
+nrow(testk_dataset)
+kaggle_log_pred <- predict(log_classifier, type = 'response', newdata = testk_dataset)
+kaggle_log_conf_matrix = table(kaggle_testset$Class, kaggle_log_pred > 0.5)
+kaggle_log_conf_matrix
+kaggle_log_pred_fin <- as.numeric(kaggle_log_pred>0.5)
+
+
+kaggle_csv$Predicted <- kaggle_log_pred_fin
+head(kaggle_csv)
+write.csv(kaggle_csv, "submission.csv", row.names = FALSE)
+
+
+
+tr_dt <- dataset[1:nrow(train_csv),]
+nrow(tr_dt)
+kg_classifier = glm(Class~ ., family = "binomial", data =tr_dt, maxit = 100)
+kaggle_log_pred <- predict(kg_classifier, type = 'response', newdata = testk_dataset)
+kaggle_log_pred_fin <- as.numeric(kaggle_log_pred>0.5)
+kaggle_csv$Predicted <- kaggle_log_pred_fin
+head(kaggle_csv)
+write.csv(kaggle_csv, "submission.csv", row.names = FALSE)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
