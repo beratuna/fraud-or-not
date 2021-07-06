@@ -5,7 +5,15 @@ Dataset contains fake and real job postings.
 
 
 # Word Cloud of Fraud job postings
-![fraud_cloud](https://user-images.githubusercontent.com/29654044/124641154-0c234c80-de97-11eb-8244-a3e1fbf387c3.png)
+
+### Fraud Job posts:
+
+![image](https://user-images.githubusercontent.com/29654044/124665110-ffadec80-deb4-11eb-8cbf-165e1675190e.png)
+
+### Real job posts:
+
+![image](https://user-images.githubusercontent.com/29654044/124665217-1e13e800-deb5-11eb-9d26-06ad8082bf39.png)
+
 
 # Explanations
 
